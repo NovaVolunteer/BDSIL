@@ -1,0 +1,5 @@
+v_1	The lecture provided a useful overview that contained valuable information I expect to leverage in my research.
+v_2	The lecture was pitched at the right level for the varied professional backgrounds of the audience.
+v_3	Many of the questions asked and answered by the speaker were helpful for clarifying points unclear to me.
+v_4	I look forward to future scheduled presentations in the Biomedical Data Science Seminar Series.
+v_5	I plan to share the YouTube Channel link with my colleagues and students.
