@@ -3,3 +3,6 @@ v_2	The lecture was pitched at the right level for the varied professional backg
 v_3	Many of the questions asked and answered by the speaker were helpful for clarifying points unclear to me.
 v_4	I look forward to future scheduled presentations in the Biomedical Data Science Seminar Series.
 v_5	I plan to share the YouTube Channel link with my colleagues and students.
+n_eval_rsp - number of eval responses
+#_nw_Opens - number of newsletter openings
+#_nl_Clicks - number of newsletter _nl_Clicks
