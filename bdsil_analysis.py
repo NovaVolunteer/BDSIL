@@ -18,9 +18,6 @@ abc=data_merge['Average Percentage Viewed'].map(lambda x: str(x)[:-1])
 #but this is way easier!
 data_merge = data_merge.replace(to_replace ='%', value = '', regex = True)
 
-
-
-
 # %%
 range(1,10)
 # %%
