@@ -9,6 +9,13 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import MinMaxScaler
 scale = StandardScaler()
 from sklearn.cluster import KMeans
+import matplotlib.pyplot as plt
+from kneed import KneeLocator
+from sklearn.datasets import make_blobs
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+from sklearn.preprocessing import StandardScaler
+
 
 #%%
 #get all the data loaded in and take a look
@@ -33,14 +40,16 @@ data_merge = data_merge.astype(convert_dict)
 
 #%% data scaling 
 #need to scale everything aside from the average, run the fit first 
-#data_merge.iloc[:,3:35] = scale.fit_transform(data_merge.iloc[:,3:35])
+data_merge.iloc[:,2:36] = scale.fit_transform(data_merge.iloc[:,2:36])
 #data_merge.iloc[:,3:35] = scale.transform(data_merge.iloc[:,3:35]) 
 #copy it to clipboard in a excel format so I can put it into a table. 
 
 #Try minmax between 0 and 1 instead, this worked better
-mms = MinMaxScaler()
-data_merge.iloc[:,2:36] = mms.fit_transform(data_merge.iloc[:,2:36])
-data_merge.to_clipboard(excel=True)
+#mms = MinMaxScaler()
+#data_merge.iloc[:,2:36] = mms.fit_transform(data_merge.iloc[:,2:36])
+#data_merge.to_clipboard(excel=True)
+
+
 
 # %% generating summary stats and gathering strongly agree columns
 #Summary Stats 
@@ -98,7 +107,75 @@ data_merge[sel] = data_merge[sel].astype("float")
 #%%
 data_merge.dtypes
 
-#%% Clustering 
-kmeans = KMeans(n_clusters= 3)
+#%% Clustering data
 cluster_data = data_merge.iloc[:,2:36]
+#replaced missing data point and change to a array
+cluster_data = cluster_data.to_numpy()
+cluster_data[10,29] = .05
 
+#%% clustering algo 
+kmeans = KMeans(
+    init="random",
+    n_clusters=6,
+    n_init=10,
+    max_iter=300,
+    random_state=1518
+    )
+#changed the data to a numby array
+
+kmeans.fit(cluster_data)
+#kmeans.inertia_
+#kmeans.n_iter_
+
+#%% Need to optimize the data, looks like 6
+kmeans_args = {
+"init": "random",
+"n_init": 10,
+"max_iter": 300,
+"random_state": 1518,
+}
+
+#frame for the standard error output 
+sse= []
+#simple for loop to run through the options, function would be better but short on time.
+for k in range(1, 11):
+    kmeans = KMeans(n_clusters=k, **kmeans_kwargs) #**special chara that allows to 
+    #pass multiple arguments
+    kmeans.fit(cluster_data)
+    sse.append(kmeans.inertia_)
+
+# %% checking on missing data, which I had and inifity which I didn't 
+np.any(np.isnan(cluster_data))
+#np.all(np.isfinite(cluster_data))
+#%%
+plt.style.use("fivethirtyeight")
+plt.plot(range(1, 11), sse)
+plt.xticks(range(1, 11))
+plt.xlabel("Number of Clusters")
+plt.ylabel("SSE")
+plt.show()
+# %%
+#label = kmeans.fit_predict(cluster_data)
+filtered_label0 = cluster_data[label == 0]
+filtered_label1 = cluster_data[label == 1]
+filtered_label2 = cluster_data[label == 2]
+filtered_label3 = cluster_data[label == 3]
+filtered_label4 = cluster_data[label == 4]
+filtered_label5 = cluster_data[label == 5]
+
+#plots the rows on the 
+plt.scatter(filtered_label0[:,0] , filtered_label0[:,1], label = 1)
+plt.scatter(filtered_label1[:,0] , filtered_label1[:,1], label = 2)
+plt.scatter(filtered_label2[:,0] , filtered_label2[:,1], label = 3)
+plt.scatter(filtered_label3[:,0] , filtered_label3[:,1], label = 4)
+plt.scatter(filtered_label4[:,0] , filtered_label4[:,1], label = 5)
+plt.scatter(filtered_label5[:,0] , filtered_label5[:,1], label = 6)
+plt.legend()
+plt.show()
+plt.savefig('speaker_cluster.png')
+
+# %%
+label_pd = pd.DataFrame(label)
+label_pd.to_clipboard(excel=True)
+# %%
+filtered_label0[:,0]
