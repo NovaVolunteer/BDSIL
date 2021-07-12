@@ -10,13 +10,13 @@ from sklearn.preprocessing import MinMaxScaler
 scale = StandardScaler()
 from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
-from kneed import KneeLocator
 from sklearn.datasets import make_blobs
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from sklearn.preprocessing import StandardScaler
-
-
+import pdb
+#%%
+OMP_NUM_THREADS=1
 #%%
 #get all the data loaded in and take a look
 newslet = pd.read_csv("newsletter_stats.csv", header=0)
@@ -41,15 +41,12 @@ data_merge = data_merge.astype(convert_dict)
 #%% data scaling 
 #need to scale everything aside from the average, run the fit first 
 data_merge.iloc[:,2:36] = scale.fit_transform(data_merge.iloc[:,2:36])
-#data_merge.iloc[:,3:35] = scale.transform(data_merge.iloc[:,3:35]) 
 #copy it to clipboard in a excel format so I can put it into a table. 
 
 #Try minmax between 0 and 1 instead, this worked better
 #mms = MinMaxScaler()
 #data_merge.iloc[:,2:36] = mms.fit_transform(data_merge.iloc[:,2:36])
 #data_merge.to_clipboard(excel=True)
-
-
 
 # %% generating summary stats and gathering strongly agree columns
 #Summary Stats 
@@ -105,7 +102,10 @@ data_merge[sel] = data_merge[sel].astype("float")
 #data_merge['Average Percentage Viewed'] = data_merge.Average Percentage Viewed.astype(float)
 
 #%%
+
 data_merge.dtypes
+
+breakpoint
 
 #%% Clustering data
 cluster_data = data_merge.iloc[:,2:36]
@@ -114,23 +114,24 @@ cluster_data = cluster_data.to_numpy()
 cluster_data[10,29] = .05
 
 #%% clustering algo 
-kmeans = KMeans(
+init_kmeans = KMeans(
     init="random",
-    n_clusters=6,
+    n_clusters=7,
     n_init=10,
     max_iter=300,
     random_state=1518
     )
 #changed the data to a numby array
 
-kmeans.fit(cluster_data)
-#kmeans.inertia_
-#kmeans.n_iter_
+init_kmeans.fit(cluster_data)
+init_kmeans.inertia_
+init_kmeans.n_iter_
 
-#%% Need to optimize the data, looks like 6
+#%% Need to optimize the data, looks like 6, we don't pass in the cluster
+#argument here because we will for loop that below. 
 kmeans_args = {
 "init": "random",
-"n_init": 10,
+"n_init": 6,
 "max_iter": 300,
 "random_state": 1518,
 }
@@ -138,41 +139,45 @@ kmeans_args = {
 #frame for the standard error output 
 sse= []
 #simple for loop to run through the options, function would be better but short on time.
-for k in range(1, 11):
-    kmeans = KMeans(n_clusters=k, **kmeans_kwargs) #**special chara that allows to 
+for k in range(1, 12):
+    kmeans = KMeans(n_clusters=k, **kmeans_args) #**special chara that allows to 
     #pass multiple arguments
     kmeans.fit(cluster_data)
     sse.append(kmeans.inertia_)
 
 # %% checking on missing data, which I had and inifity which I didn't 
-np.any(np.isnan(cluster_data))
+np.any(np.isnan(cluster_data))#one missing data point so didn't work
 #np.all(np.isfinite(cluster_data))
 #%%
 plt.style.use("fivethirtyeight")
-plt.plot(range(1, 11), sse)
-plt.xticks(range(1, 11))
+plt.plot(range(1, 12), sse)
+plt.xticks(range(1, 12))
 plt.xlabel("Number of Clusters")
 plt.ylabel("SSE")
 plt.show()
-# %%
-#label = kmeans.fit_predict(cluster_data)
-filtered_label0 = cluster_data[label == 0]
-filtered_label1 = cluster_data[label == 1]
-filtered_label2 = cluster_data[label == 2]
-filtered_label3 = cluster_data[label == 3]
-filtered_label4 = cluster_data[label == 4]
-filtered_label5 = cluster_data[label == 5]
+#%% Capturing the predicted lables. 
+label = init_kmeans.fit_predict(cluster_data)
 
-#plots the rows on the 
-plt.scatter(filtered_label0[:,0] , filtered_label0[:,1], label = 1)
-plt.scatter(filtered_label1[:,0] , filtered_label1[:,1], label = 2)
-plt.scatter(filtered_label2[:,0] , filtered_label2[:,1], label = 3)
-plt.scatter(filtered_label3[:,0] , filtered_label3[:,1], label = 4)
-plt.scatter(filtered_label4[:,0] , filtered_label4[:,1], label = 5)
-plt.scatter(filtered_label5[:,0] , filtered_label5[:,1], label = 6)
-plt.legend()
-plt.show()
-plt.savefig('speaker_cluster.png')
+#%% #x cluster no.,y used to generate cluster, z is label index
+def label_index_1(x,y,z):
+    #x cluster no.,y used to generate cluster, z is label index
+    filtered_label = y[z == x]
+    return filtered_label 
+
+#%%
+label_n = []
+
+for k in range(0,7):
+    output = label_index_1(k,cluster_data,label)
+    plt.scatter(output[:,0] , output[:,1], label = k)
+    plt.legend()
+   
+
+
+# %%
+xxx = label_index_1(1,cluster_data,label)
+
+#plt.savefig('speaker_cluster.png')
 
 # %%
 label_pd = pd.DataFrame(label)
