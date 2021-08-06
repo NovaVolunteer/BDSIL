@@ -15,6 +15,7 @@ from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from sklearn.preprocessing import StandardScaler
 import pdb
+import plotnine
 #%%
 OMP_NUM_THREADS=1
 #%%
@@ -104,8 +105,6 @@ data_merge[sel] = data_merge[sel].astype("float")
 #%%
 
 data_merge.dtypes
-
-breakpoint
 
 #%% Clustering data
 cluster_data = data_merge.iloc[:,2:36]
