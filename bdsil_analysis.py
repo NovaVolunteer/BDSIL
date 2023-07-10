@@ -1,5 +1,5 @@
 #%%
-import docx
+#import docx
 from datetime import date
 import pandas as pd
 import numpy as np
@@ -15,7 +15,7 @@ from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from sklearn.preprocessing import StandardScaler
 import pdb
-import plotnine
+#import plotnine
 #%%
 OMP_NUM_THREADS=1
 #%%
@@ -29,22 +29,21 @@ data_merge = pd.read_csv("spkr_stats.csv")
 #data_merge.info()
 
 # need to remove all % signs and convert those columns to decimals essentially divide by 100. 
-#data_merge = data_merge.replace(to_replace ='%', value = '', regex = True)
+data_merge = data_merge.replace(to_replace ='%', value = '', regex = True)
 #replace missing value in Average Percentage Viewed 
 #data_merge.at[23,'Average Percentage Viewed'] = 15
-#data_merge['Average Percentage Viewed'].mean()
+data_merge['Average Percentage Viewed'].mean()
 convert_dict={'Average Percentage Viewed': float}
 data_merge = data_merge.astype(convert_dict)
 
 #%% data scaling 
 #need to scale everything aside from the average, run the fit first 
-#data_merge.iloc[:,2:36] = scale.fit_transform(data_merge.iloc[:,2:36])
-#copy it to clipboard in a excel format so I can put it into a table. 
 
 #Try minmax between 0 and 1 instead, this worked better
 mms = MinMaxScaler()
-data_merge.iloc[:,2:36] = mms.fit_transform(data_merge.iloc[:,2:36])
-data_merge.to_clipboard(excel=True)
+data_merge.iloc[:,1:36] = mms.fit_transform(data_merge.iloc[:,1:36])
+
+data_merge.to_excel('speaker_stats.xlsx',sheet_name = 'sheet1', index=False)
 
 # %% generating summary stats and gathering strongly agree columns
 #Summary Stats 
@@ -52,7 +51,7 @@ summary_stat = data_merge.describe()
 #transpose to make the table more readable
 summary_stat = summary_stat.transpose()
 #copy it to excel clipboard
-summary_stat.to_clipboard(excel=True)
+summary_stat.to_excel('speaker_summary_1.xlsx',sheet_name = 'sheet2', index=False)
 
 
 #gathering various columns to  
@@ -77,8 +76,6 @@ mean_spkr_rate = speaker_perc.mean(axis=1)
 speaker_perc = pd.concat([speaker_perc,mean_spkr_rate], axis=1,join='inner')
 
 #copy to clipboard thats ready to paste into excel 
-speaker_perc.to_clipboard(excel=True)
-
 speaker_perc.rename(columns = {0:"ave"}, inplace=True)
 
 summary_speaker_prec = speaker_perc.describe()
@@ -86,7 +83,7 @@ summary_speaker_prec = speaker_perc.describe()
 #strongly agree category.
 summary_speaker_prec
 
-
+speaker_perc.to_excel('speaker_perc_1.xlsx',sheet_name = 'sheet1', index=False)
 #%%
 
 data_merge.dtypes
@@ -132,24 +129,35 @@ for k in range(1, 12):
 # %% checking on missing data, which I had and inifity which I didn't 
 np.any(np.isnan(cluster_data))#one missing data point so didn't work
 #np.all(np.isfinite(cluster_data))
+
 #%% Capturing the predicted lables. 
 label = init_kmeans.fit_predict(cluster_data)
 
 
 #%%
 data_merge_1=data_merge.loc[0:19,]
+
 data_merge_1['clusters']=label
 data_merge_1['ave_strong_agree']=ave_rate_spk.loc[0:19,]
+data_merge_1['average_perc_viewed']=data_merge.iloc[0:19,6]
 #%%
-#plt.scatter(data_merge_1.ave_strong_agree, data_merge_1.Average Percentage Viewed, c=labels, cmap='viridis')
-#plt.show()
-from matplotlib import cm
-from matplotlib.colors import ListedColormap
+cmap = ListedColormap(["red","orange","blue"], name='Clusters', N=None)
+plt.scatter(data_merge_1.ave_strong_agree, data_merge_1.average_perc_viewed,c=label, cmap=cmap, s=150, alpha=0.5, title="Clusters of Speaker Reviews")
+plt.show()
+#from matplotlib import cm
+#from matplotlib.colors import ListedColormap
+
+#%%
+import matplotlib.pyplot as plt
 
 #%%
 cmap = ListedColormap(["red","orange","blue"], name='Clusters', N=None)
-data_merge_1.plot(kind='scatter', x='ave_strong_agree', y='# of Innovation Lab (zoom) attendees', 
-                  s=150, c=label, cmap=cmap, title="Clusters of Engagement")
+xx=plt.scatter(x=data_merge_1.ave_strong_agree, y=data_merge_1.average_perc_viewed,
+            s=150, c=label, cmap=cmap, alpha=0.5)
+plt.title("Clusters of Speaker Reviews")
+plt.xlabel("Average Strongly Agree Rating")
+plt.ylabel("Average Percentage Viewed")
+legend1=plt.legend(*xx.legend_elements(),loc="lower left", title="Clusters")
 plt.show()
 
 # %%python3 -m venv /path/to/new/virtual/environment
