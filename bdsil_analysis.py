@@ -1,6 +1,7 @@
 #%%
 #import docx
 from datetime import date
+from matplotlib.colors import ListedColormap
 import pandas as pd
 import numpy as np
 from pandas.core.frame import DataFrame
@@ -20,7 +21,7 @@ import pdb
 OMP_NUM_THREADS=1
 #%%
 #get all the data loaded in and take a look
-data_merge = pd.read_csv("spkr_stats.csv")
+data_merge = pd.read_csv("spkr_stats_24.csv")
 
 # %% data merging and cleaning 
 #Need to merge all these into one file using the Speaker column 
@@ -37,13 +38,19 @@ convert_dict={'Average Percentage Viewed': float}
 data_merge = data_merge.astype(convert_dict)
 
 #%% data scaling 
-#need to scale everything aside from the average, run the fit first 
 
+# remove coma and % from the data_merge
+data_merge = data_merge.replace(to_replace =',', value = '', regex = True)
+data_merge = data_merge.replace(to_replace ='%', value = '', regex = True)
+#convert to float aside from first column
+data_merge.iloc[:,1:34] = data_merge.iloc[:,1:34].astype(float)
+
+#%%
 #Try minmax between 0 and 1 instead, this worked better
 mms = MinMaxScaler()
-data_merge.iloc[:,1:36] = mms.fit_transform(data_merge.iloc[:,1:36])
+data_merge.iloc[:,1:34] = mms.fit_transform(data_merge.iloc[:,1:34])
 
-data_merge.to_excel('speaker_stats.xlsx',sheet_name = 'sheet1', index=False)
+#data_merge.to_excel('speaker_stats.xlsx',sheet_name = 'sheet1', index=False)
 
 # %% generating summary stats and gathering strongly agree columns
 #Summary Stats 
@@ -51,8 +58,9 @@ summary_stat = data_merge.describe()
 #transpose to make the table more readable
 summary_stat = summary_stat.transpose()
 #copy it to excel clipboard
-summary_stat.to_excel('speaker_summary_1.xlsx',sheet_name = 'sheet2', index=False)
-
+#%%
+data_merge_1.to_excel('spkr_stats_24.xlsx',sheet_name = 'sheet2', index=False)
+#%%
 
 #gathering various columns to  
 xx =  data_merge.loc[:, data_merge.columns.str.startswith('Strongly Agree')]
@@ -89,7 +97,8 @@ speaker_perc.to_excel('speaker_perc_1.xlsx',sheet_name = 'sheet1', index=False)
 data_merge.dtypes
 
 #%% Clustering data
-cluster_data = data_merge.iloc[0:20,1:33]
+cluster_data = data_merge.iloc[0:19,1:34]
+
 #replaced missing data point and change to a array
 cluster_data = cluster_data.to_numpy()
 #cluster_data[10,29] = .05
@@ -119,7 +128,7 @@ kmeans_args = {
 
 #frame for the standard error output 
 sse= []
-#simple for loop to run through the options, function would be better but short on time.
+#simple 'for loop' to run through the options, function would be better but short on time.
 for k in range(1, 12):
     kmeans = KMeans(n_clusters=k, **kmeans_args) #**special chara that allows to 
     #pass multiple arguments
@@ -138,28 +147,32 @@ label = init_kmeans.fit_predict(cluster_data)
 data_merge_1=data_merge.loc[0:19,]
 
 data_merge_1['clusters']=label
-data_merge_1['ave_strong_agree']=ave_rate_spk.loc[0:19,]
-data_merge_1['average_perc_viewed']=data_merge.iloc[0:19,6]
 #%%
-cmap = ListedColormap(["red","orange","blue"], name='Clusters', N=None)
-plt.scatter(data_merge_1.ave_strong_agree, data_merge_1.average_perc_viewed,c=label, cmap=cmap, s=150, alpha=0.5, title="Clusters of Speaker Reviews")
-plt.show()
-#from matplotlib import cm
-#from matplotlib.colors import ListedColormap
+#rename %Strongly Agree to ave_strong_agree
+data_merge_1.rename(columns={'% Strongly Agree':'ave_strong_agree'}, inplace=True)
+data_merge_1.rename(columns={'Average Percentage Viewed':'average_perc_viewed'}, inplace=True)
+data_merge_1.rename(columns={'#_Youtube_live_streamers':'youtube_streamers'}, inplace=True)
 
 #%%
 import matplotlib.pyplot as plt
 
 #%%
-cmap = ListedColormap(["red","orange","blue"], name='Clusters', N=None)
-xx=plt.scatter(x=data_merge_1.ave_strong_agree, y=data_merge_1.average_perc_viewed,
+#remove the space in the column name
+data_merge_1.columns = data_merge_1.columns.str.replace(' ', '_')
+
+#%%
+cmap = ListedColormap(["orange","red","blue"], name='Clusters', N=None)
+xx=plt.scatter(x=data_merge_1.ave_strong_agree, y=data_merge_1.youtube_streamers,
             s=150, c=label, cmap=cmap, alpha=0.5)
 plt.title("Clusters of Speaker Reviews")
-plt.xlabel("Average Strongly Agree Rating")
+plt.xlabel("YouTube Streamers")
 plt.ylabel("Average Percentage Viewed")
 legend1=plt.legend(*xx.legend_elements(),loc="lower left", title="Clusters")
 plt.show()
 
 # %%python3 -m venv /path/to/new/virtual/environment
 fig
+# %%
+import plotly.express as px
+fig = px.scatter(data_merge_1, x="ave_strong_agree", y="average_perc_viewed", color="clusters")
 # %%
