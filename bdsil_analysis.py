@@ -64,7 +64,7 @@ data_merge.to_excel('spkr_stats_25.xlsx',sheet_name = 'sheet2', index=False)
 #%%
 ###### CREATE IMPACT SCORE - ALL SOCIAL MEDIA + NEWSLETTER COLUMNS ######
 # Create a list of column indices you want to include
-col_indices = [0] + list(range(3, 7)) + [31, 32]
+col_indices = [0] + list(range(2, 6)) + [31, 32]
 
 # Use .iloc to select columns by index
 impact_df = data_merge.iloc[:, col_indices].copy()
@@ -72,10 +72,8 @@ impact_df = data_merge.iloc[:, col_indices].copy()
 # Sum the numeric columns (excluding the first column, which is likely non-numeric)
 impact_df['total'] = impact_df.iloc[:, 1:].sum(axis=1)
 
-#%%
-# export to excel
-impact_df.to_excel('impact_score_25.xlsx', sheet_name='sheet1', index=False)
-
+#drop row 16
+impact_df = impact_df.drop(index=16)
 
 
 #%%
@@ -86,39 +84,29 @@ xy = data_merge.loc[:,'Speaker']
 
 speaker_perc = pd.concat([xy,xx],axis=1, join='inner')
 
+
 #need to find the average of rows 
 
 #%% generating strongly agree average 
-#generate the means 
-ave_rate_spk = speaker_perc.mean(axis=1)
 
-#%%
 
-#speaker_perc['Strongly Agree_5_yt'] = speaker_perc['Strongly Agree_5_yt'].astype(int)
-
-mean_spkr_rate = speaker_perc.mean(axis=1)
-
-speaker_perc = pd.concat([speaker_perc,mean_spkr_rate], axis=1,join='inner')
-
+#sum columns zero five then divide by 5
+speaker_perc["ave_strongly_agree"] = speaker_perc.iloc[:,1:6].mean(axis=1)
 #copy to clipboard thats ready to paste into excel 
-speaker_perc.rename(columns = {0:"ave"}, inplace=True)
 
-summary_speaker_prec = speaker_perc.describe()
-#Speak to the 3rd/75% upper quartile just 5 speakers, in terms of average feedback in the 
-#strongly agree category.
-summary_speaker_prec
-
-speaker_perc.to_excel('speaker_perc_1.xlsx',sheet_name = 'sheet1', index=False)
 #%%
-
-data_merge.dtypes
+#add the average to the impact_df
+impact_df = pd.concat([impact_df, speaker_perc["ave_strongly_agree"]], axis=1)
 
 #%% Clustering data
-cluster_data = data_merge.iloc[0:19,1:34]
+cluster_data = impact_df.drop(columns=['Speaker'])
 
 #replaced missing data point and change to a array
 cluster_data = cluster_data.to_numpy()
 #cluster_data[10,29] = .05
+
+#remove row 16
+cluster_data = np.delete(cluster_data, 16, axis=0)
 
 #%% clustering algo 
 init_kmeans = KMeans(
@@ -138,7 +126,7 @@ init_kmeans.n_iter_
 #argument here because we will for loop that below. 
 kmeans_args = {
 "init": "random",
-"n_init": 6,
+"n_init": 7,
 "max_iter": 300,
 "random_state": 1518,
 }
@@ -161,9 +149,9 @@ label = init_kmeans.fit_predict(cluster_data)
 
 
 #%%
-data_merge_1=data_merge.loc[0:19,]
+#merge labels to the impact_df
+impact_df['clusters'] = label
 
-data_merge_1['clusters']=label
 #%%
 #rename %Strongly Agree to ave_strong_agree
 data_merge_1.rename(columns={'% Strongly Agree':'ave_strong_agree'}, inplace=True)
