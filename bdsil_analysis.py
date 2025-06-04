@@ -16,14 +16,15 @@ from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from sklearn.preprocessing import StandardScaler
 import pdb
+import openpyxl
 #import plotnine
 #%%
 OMP_NUM_THREADS=1
 #%%
 #get all the data loaded in and take a look
-data_merge = pd.read_csv("spkr_stats_24.csv")
+data_merge = pd.read_csv("2025bdsil.csv")
 
-# %% data merging and cleaning 
+#%% data merging and cleaning 
 #Need to merge all these into one file using the Speaker column 
 #data_merge = newslet.merge(spkr_eval.merge(spkr_view_stats, on='Speaker'), 
 #on='Speaker')
@@ -43,12 +44,12 @@ data_merge = data_merge.astype(convert_dict)
 data_merge = data_merge.replace(to_replace =',', value = '', regex = True)
 data_merge = data_merge.replace(to_replace ='%', value = '', regex = True)
 #convert to float aside from first column
-data_merge.iloc[:,1:34] = data_merge.iloc[:,1:34].astype(float)
+data_merge.iloc[:,2:33] = data_merge.iloc[:,2:33].astype(float)
 
 #%%
 #Try minmax between 0 and 1 instead, this worked better
 mms = MinMaxScaler()
-data_merge.iloc[:,1:34] = mms.fit_transform(data_merge.iloc[:,1:34])
+data_merge.iloc[:,2:34] = mms.fit_transform(data_merge.iloc[:,2:34])
 
 #data_merge.to_excel('speaker_stats.xlsx',sheet_name = 'sheet1', index=False)
 
@@ -59,7 +60,24 @@ summary_stat = data_merge.describe()
 summary_stat = summary_stat.transpose()
 #copy it to excel clipboard
 #%%
-data_merge_1.to_excel('spkr_stats_24.xlsx',sheet_name = 'sheet2', index=False)
+data_merge.to_excel('spkr_stats_25.xlsx',sheet_name = 'sheet2', index=False)
+#%%
+###### CREATE IMPACT SCORE - ALL SOCIAL MEDIA + NEWSLETTER COLUMNS ######
+# Create a list of column indices you want to include
+col_indices = [0] + list(range(3, 7)) + [31, 32]
+
+# Use .iloc to select columns by index
+impact_df = data_merge.iloc[:, col_indices].copy()
+
+# Sum the numeric columns (excluding the first column, which is likely non-numeric)
+impact_df['total'] = impact_df.iloc[:, 1:].sum(axis=1)
+
+#%%
+# export to excel
+impact_df.to_excel('impact_score_25.xlsx', sheet_name='sheet1', index=False)
+
+
+
 #%%
 
 #gathering various columns to  
@@ -71,11 +89,10 @@ speaker_perc = pd.concat([xy,xx],axis=1, join='inner')
 #need to find the average of rows 
 
 #%% generating strongly agree average 
-
 #generate the means 
 ave_rate_spk = speaker_perc.mean(axis=1)
-#%%
 
+#%%
 
 #speaker_perc['Strongly Agree_5_yt'] = speaker_perc['Strongly Agree_5_yt'].astype(int)
 
