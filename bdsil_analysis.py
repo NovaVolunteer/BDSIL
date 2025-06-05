@@ -24,19 +24,6 @@ OMP_NUM_THREADS=1
 #get all the data loaded in and take a look
 data_merge = pd.read_csv("2025bdsil.csv")
 
-#%% data merging and cleaning 
-#Need to merge all these into one file using the Speaker column 
-#data_merge = newslet.merge(spkr_eval.merge(spkr_view_stats, on='Speaker'), 
-#on='Speaker')
-#data_merge.info()
-
-# need to remove all % signs and convert those columns to decimals essentially divide by 100. 
-data_merge = data_merge.replace(to_replace ='%', value = '', regex = True)
-#replace missing value in Average Percentage Viewed 
-#data_merge.at[23,'Average Percentage Viewed'] = 15
-data_merge['Average Percentage Viewed'].mean()
-convert_dict={'Average Percentage Viewed': float}
-data_merge = data_merge.astype(convert_dict)
 
 #%% data scaling 
 
@@ -53,14 +40,8 @@ data_merge.iloc[:,2:34] = mms.fit_transform(data_merge.iloc[:,2:34])
 
 #data_merge.to_excel('speaker_stats.xlsx',sheet_name = 'sheet1', index=False)
 
-# %% generating summary stats and gathering strongly agree columns
-#Summary Stats 
-summary_stat = data_merge.describe()
-#transpose to make the table more readable
-summary_stat = summary_stat.transpose()
-#copy it to excel clipboard
-#%%
-data_merge.to_excel('spkr_stats_25.xlsx',sheet_name = 'sheet2', index=False)
+
+
 #%%
 ###### CREATE IMPACT SCORE - ALL SOCIAL MEDIA + NEWSLETTER COLUMNS ######
 # Create a list of column indices you want to include
@@ -72,12 +53,11 @@ impact_df = data_merge.iloc[:, col_indices].copy()
 # Sum the numeric columns (excluding the first column, which is likely non-numeric)
 impact_df['total'] = impact_df.iloc[:, 1:].sum(axis=1)
 
+#%%
 #drop row 16
 impact_df = impact_df.drop(index=16)
 
-
 #%%
-
 #gathering various columns to  
 xx =  data_merge.loc[:, data_merge.columns.str.startswith('Strongly Agree')]
 xy = data_merge.loc[:,'Speaker']
@@ -92,19 +72,20 @@ speaker_perc = pd.concat([xy,xx],axis=1, join='inner')
 
 #sum columns zero five then divide by 5
 speaker_perc["ave_strongly_agree"] = speaker_perc.iloc[:,1:6].mean(axis=1)
-#copy to clipboard thats ready to paste into excel 
+
 
 #%%
 #add the average to the impact_df
 impact_df = pd.concat([impact_df, speaker_perc["ave_strongly_agree"]], axis=1)
 
 #%% Clustering data
-cluster_data = impact_df.drop(columns=['Speaker'])
+cluster_data = impact_df.drop(columns=['Speaker',"total"])
 
 #replaced missing data point and change to a array
-cluster_data = cluster_data.to_numpy()
+#cluster_data = cluster_data.to_numpy()
 #cluster_data[10,29] = .05
 
+#%%
 #remove row 16
 cluster_data = np.delete(cluster_data, 16, axis=0)
 
@@ -140,44 +121,75 @@ for k in range(1, 12):
     kmeans.fit(cluster_data)
     sse.append(kmeans.inertia_)
 
-# %% checking on missing data, which I had and inifity which I didn't 
-np.any(np.isnan(cluster_data))#one missing data point so didn't work
-#np.all(np.isfinite(cluster_data))
 
 #%% Capturing the predicted lables. 
 label = init_kmeans.fit_predict(cluster_data)
 
-
 #%%
+#remove last row from impact_df
+impact_df = impact_df.drop(index=16)
 #merge labels to the impact_df
 impact_df['clusters'] = label
 
 #%%
 #rename %Strongly Agree to ave_strong_agree
-data_merge_1.rename(columns={'% Strongly Agree':'ave_strong_agree'}, inplace=True)
-data_merge_1.rename(columns={'Average Percentage Viewed':'average_perc_viewed'}, inplace=True)
-data_merge_1.rename(columns={'#_Youtube_live_streamers':'youtube_streamers'}, inplace=True)
+impact_df.rename(columns={'Average Percentage Viewed':'average_perc_viewed'}, inplace=True)
+impact_df.rename(columns={'# Youtube live streamers':'youtube_streamers'}, inplace=True)
 
 #%%
 import matplotlib.pyplot as plt
 
 #%%
-#remove the space in the column name
-data_merge_1.columns = data_merge_1.columns.str.replace(' ', '_')
+impact_df.info()
 
 #%%
-cmap = ListedColormap(["orange","red","blue"], name='Clusters', N=None)
-xx=plt.scatter(x=data_merge_1.ave_strong_agree, y=data_merge_1.youtube_streamers,
-            s=150, c=label, cmap=cmap, alpha=0.5)
+#remove all special characters from the dataframe columns
+impact_df.columns = impact_df.columns.str.replace('[^a-zA-Z0-9]', '_', regex=True)
+#remove spaces from the column names
+impact_df.columns = impact_df.columns.str.replace(' ', '_', regex=True)
+#make all columns lower case
+impact_df.columns = impact_df.columns.str.lower()
+
+
+#%%
+# why is this not working?
+
+cmap = ListedColormap(["orange","red","blue"], name='clusters', N=None)
+# Create a scatter plot for the current cluster 
+import matplotlib.pyplot as plt
+
+# Example: assuming label is a list or Series of cluster labels and cmap is defined
+xx = plt.scatter(
+    x=impact_df["ave_strongly_agree"],
+    y=impact_df["__of_clicks"],
+    c=impact_df["clusters"],# color based on cluster labels
+    cmap=cmap,              # specify the colormap
+    edgecolor='black',
+    marker='o',
+    s=150,
+    alpha=0.5
+)
+
 plt.title("Clusters of Speaker Reviews")
-plt.xlabel("YouTube Streamers")
-plt.ylabel("Average Percentage Viewed")
-legend1=plt.legend(*xx.legend_elements(),loc="lower left", title="Clusters")
+plt.xlabel("Ave_Strong_Agree")
+plt.xticks(rotation=45)
+plt.ylabel("YouTube Streamers")
+
+# Create legend from scatter elements
+legend1 = plt.legend(*xx.legend_elements(), loc="lower left", title="Clusters")
+plt.gca().add_artist(legend1)
+
 plt.show()
 
+#%%
+print(impact_df["clusters"].unique())
+impact_df["clusters"] = impact_df["clusters"].astype(int)
 # %%python3 -m venv /path/to/new/virtual/environment
 fig
 # %%
 import plotly.express as px
-fig = px.scatter(data_merge_1, x="ave_strong_agree", y="average_perc_viewed", color="clusters")
+fig = px.scatter(impact_df, x="ave_strongly_agree", y="__youtube_live_streamers", color="clusters")
+# %%
+
+impact_df.info()
 # %%
