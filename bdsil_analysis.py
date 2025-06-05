@@ -18,9 +18,69 @@ from sklearn.preprocessing import StandardScaler
 import pdb
 import openpyxl
 #import plotnine
-#%%
-OMP_NUM_THREADS=1
-#%%
+
+#%% Untested function
+import pandas as pd
+from sklearn.preprocessing import MinMaxScaler
+import re
+
+def prepare_speaker_data(filepath: str) -> pd.DataFrame:
+    """
+    Loads and preprocesses speaker data from a CSV file.
+    Cleans column names, scales numeric data, computes impact scores,
+    and returns a DataFrame ready for clustering.
+
+    Parameters:
+        filepath (str): Path to the CSV file.
+
+    Returns:
+        pd.DataFrame: Cleaned and processed data suitable for clustering.
+    """
+    # Load data
+    data_merge = pd.read_csv(filepath)
+
+    # Clean column names: lowercase and remove special characters
+    cleaned_columns = [
+        re.sub(r'[^a-z0-9_]', '_', col.lower()) for col in data_merge.columns
+    ]
+    data_merge.columns = cleaned_columns
+
+    # Remove commas and percent signs from the data
+    data_merge = data_merge.replace({',': '', '%': ''}, regex=True)
+
+    # Convert appropriate columns to float
+    total_cols = data_merge.shape[1]
+    data_merge.iloc[:, 2:total_cols - 1] = data_merge.iloc[:, 2:total_cols - 1].astype(float)
+
+    # Scale numeric values using MinMaxScaler
+    mms = MinMaxScaler()
+    data_merge.iloc[:, 2:total_cols] = mms.fit_transform(data_merge.iloc[:, 2:total_cols])
+
+    # Identify impact-related columns
+    impact_indices = [0] + list(range(2, 6)) + [total_cols - 2, total_cols - 1]
+    impact_df = data_merge.iloc[:, impact_indices].copy()
+    impact_df['total'] = impact_df.iloc[:, 1:].sum(axis=1)
+
+    # Drop known bad row, if it exists
+    if 16 in impact_df.index:
+        impact_df = impact_df.drop(index=16)
+
+    # Average of "strongly agree" columns
+    agree_cols = [col for col in data_merge.columns if col.startswith('strongly_agree')]
+    speaker_col = 'speaker' if 'speaker' in data_merge.columns else data_merge.columns[0]
+    speaker_perc = pd.concat([data_merge[speaker_col], data_merge[agree_cols]], axis=1)
+    speaker_perc['ave_strongly_agree'] = speaker_perc.iloc[:, 1:6].mean(axis=1)
+
+    # Add to impact_df
+    impact_df = pd.concat([impact_df, speaker_perc['ave_strongly_agree']], axis=1)
+
+    # Return only numeric columns for clustering
+    return impact_df.drop(columns=['speaker', 'total'], errors='ignore')
+
+
+
+
+#%% Load the data
 #get all the data loaded in and take a look
 data_merge = pd.read_csv("2025bdsil.csv")
 
